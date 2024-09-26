@@ -1,6 +1,8 @@
 // lib/views/home_view.dart
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../controllers/scan_controller.dart';
 import '../models/scan_model.dart';
 
@@ -67,6 +69,41 @@ class _HomeViewState extends State<HomeView> {
     });
   }
 
+  // Método para subir datos escaneados a la API
+  Future<void> _uploadScannedData() async {
+    List<Scan> scans = await _scanController.getActiveScans();
+
+    for (Scan scan in scans) {
+      final response = await http.post(
+        Uri.parse('http://192.168.170.176:8000/api/receive-raw-material'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'code': scan.code,
+          'updated_at': scan.updatedAt,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 400) {
+        // Eliminar el registro de la base de datos
+        await _scanController.deleteScan(scan.id!);
+        Fluttertoast.showToast(
+          msg: "Código enviado: ${scan.code}",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+      } else if (response.statusCode == 500) {
+        Fluttertoast.showToast(
+          msg: "Error al conectar con el servidor.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+    }
+
+    // Actualizar el contador después de la subida
+    _updateCount();
+  }
+
   // Mostrar los scans activos en la tabla
   Widget _buildScannedTable() {
     return FutureBuilder<List<Scan>>(
@@ -121,9 +158,7 @@ class _HomeViewState extends State<HomeView> {
             SizedBox(height: 16),
             // Botón de carga
             ElevatedButton.icon(
-              onPressed: () {
-                Fluttertoast.showToast(msg: "Hello, World!");
-              },
+              onPressed: _uploadScannedData,
               icon: Icon(Icons.cloud_sync_outlined),
               label: Text('Upload Scanned Data'),
             ),
