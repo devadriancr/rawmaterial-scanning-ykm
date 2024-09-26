@@ -26,9 +26,29 @@ class _HomeViewState extends State<HomeView> {
 
   // Insertar el código en la base de datos y actualizar el contador
   Future<void> _handleSubmit() async {
-    if (_controller.text.isNotEmpty) {
+    String code = _controller.text;
+
+    // Validar longitud del código
+    if (code.length < 7) {
+      Fluttertoast.showToast(
+        msg: "El código debe tener al menos 7 caracteres.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+      return;
+    } else if (code.length > 15) {
+      Fluttertoast.showToast(
+        msg: "El código no puede exceder los 15 caracteres.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+      return;
+    }
+
+    // Insertar el código en la base de datos si pasa la validación
+    if (code.isNotEmpty) {
       Scan scan = Scan(
-        code: _controller.text,
+        code: code,
         createdAt: DateTime.now().toString(),
         updatedAt: DateTime.now().toString(),
       );

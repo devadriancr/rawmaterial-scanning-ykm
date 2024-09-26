@@ -48,4 +48,9 @@ class ScanController {
       return Scan.fromMap(scanMaps[i]);
     });
   }
+
+  // Método para eliminar un scan por su ID
+  Future<void> deleteScan(int id) async {
+    await _database.delete('scans', where: 'id = ?', whereArgs: [id]);
+  }
 }
