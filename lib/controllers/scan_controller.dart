@@ -1,3 +1,4 @@
+// lib/controllers/scan_controller.dart
 import 'dart:convert';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
@@ -8,7 +9,7 @@ import '../models/scan_model.dart';
 class ScanController {
   late Database _database;
 
-  // Inicializar la base de datos
+  // Initialize the database
   Future<void> initDatabase() async {
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, 'scans.db');
@@ -20,7 +21,7 @@ class ScanController {
         await db.execute('''
           CREATE TABLE scans (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            code TEXT,
+            code TEXT UNIQUE,
             status BOOLEAN DEFAULT 1,
             created_at TEXT,
             updated_at TEXT
@@ -30,19 +31,29 @@ class ScanController {
     );
   }
 
-  // Insertar un nuevo scan
+  // Insert a new scan
   Future<void> insertScan(Scan scan) async {
     await _database.insert('scans', scan.toMap());
   }
 
-  // Obtener el número de scans activos (status = 1)
+  // Check if a scan code already exists
+  Future<bool> scanExists(String code) async {
+    List<Map<String, dynamic>> result = await _database.query(
+      'scans',
+      where: 'code = ?',
+      whereArgs: [code],
+    );
+    return result.isNotEmpty;
+  }
+
+  // Get the number of active scans (status = 1)
   Future<int> getActiveScansCount() async {
     List<Map<String, dynamic>> countList = await _database
         .rawQuery('SELECT COUNT(*) AS count FROM scans WHERE status = 1');
     return countList.first['count'] as int;
   }
 
-  // Obtener todos los scans activos (status = 1)
+  // Get all active scans (status = 1)
   Future<List<Scan>> getActiveScans() async {
     List<Map<String, dynamic>> scanMaps =
         await _database.query('scans', where: 'status = 1');
@@ -51,12 +62,12 @@ class ScanController {
     });
   }
 
-  // Método para eliminar un scan por su ID
+  // Method to delete a scan by its ID
   Future<void> deleteScan(int id) async {
     await _database.delete('scans', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Método para enviar datos a la API
+  // Method to send data to the API
   Future<void> uploadScannedData(String code, String updatedAt) async {
     final url = Uri.parse(
         'http://192.168.130.9:8086/index.php/api/receive-raw-material');
@@ -72,19 +83,19 @@ class ScanController {
     );
 
     if (response.statusCode == 200 || response.statusCode == 400) {
-      // Eliminar el registro si la respuesta es 200 o 400
-      await deleteScanByCode(code); // Método adicional para eliminar el scan
+      // Delete the record if the response is 200 or 400
+      await deleteScanByCode(code); // Additional method to delete the scan
     } else if (response.statusCode == 500) {
-      // Manejar error de conexión o del servidor
+      // Handle connection or server error
       Fluttertoast.showToast(
-        msg: "Error de conexión o error del servidor",
+        msg: "Connection error or server error",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
       );
     }
   }
 
-  // Método adicional para eliminar un scan por código
+  // Additional method to delete a scan by code
   Future<void> deleteScanByCode(String code) async {
     final scans = await getActiveScans();
     for (var scan in scans) {

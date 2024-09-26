@@ -23,31 +23,41 @@ class _HomeViewState extends State<HomeView> {
     _scanController.initDatabase().then((_) {
       _updateCount();
     });
-    _focusNode.requestFocus(); // Foco automático en el input
+    _focusNode.requestFocus(); // Automatic focus on the input
   }
 
-  // Insertar el código en la base de datos y actualizar el contador
+  // Insert the code into the database and update the count
   Future<void> _handleSubmit() async {
     String code = _controller.text;
 
-    // Validar longitud del código
+    // Validate code length
     if (code.length < 7) {
       Fluttertoast.showToast(
-        msg: "El código debe tener al menos 7 caracteres.",
+        msg: "The code must be at least 7 characters long.",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
       );
       return;
     } else if (code.length > 15) {
       Fluttertoast.showToast(
-        msg: "El código no puede exceder los 15 caracteres.",
+        msg: "The code cannot exceed 15 characters.",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
       );
       return;
     }
 
-    // Insertar el código en la base de datos si pasa la validación
+    // Check for duplicates before inserting
+    if (await _scanController.scanExists(code)) {
+      Fluttertoast.showToast(
+        msg: "This code is already registered.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+      return;
+    }
+
+    // Insert the code into the database if it passes validation
     if (code.isNotEmpty) {
       Scan scan = Scan(
         code: code,
@@ -56,12 +66,12 @@ class _HomeViewState extends State<HomeView> {
       );
       await _scanController.insertScan(scan);
       _controller.clear();
-      _focusNode.requestFocus(); // Mantener el enfoque en el input
+      _focusNode.requestFocus(); // Keep focus on the input
       _updateCount();
     }
   }
 
-  // Actualiza el contador de scans activos
+  // Update the count of active scans
   Future<void> _updateCount() async {
     int count = await _scanController.getActiveScansCount();
     setState(() {
@@ -69,7 +79,7 @@ class _HomeViewState extends State<HomeView> {
     });
   }
 
-  // Método para subir datos escaneados a la API
+  // Method to upload scanned data to the API
   Future<void> _uploadScannedData() async {
     List<Scan> scans = await _scanController.getActiveScans();
 
@@ -84,27 +94,27 @@ class _HomeViewState extends State<HomeView> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 400) {
-        // Eliminar el registro de la base de datos
+        // Delete the record from the database
         await _scanController.deleteScan(scan.id!);
         Fluttertoast.showToast(
-          msg: "Código enviado: ${scan.code}",
+          msg: "Code sent: ${scan.code}",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
         );
       } else if (response.statusCode == 500) {
         Fluttertoast.showToast(
-          msg: "Error al conectar con el servidor.",
+          msg: "Error connecting to the server.",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
         );
       }
     }
 
-    // Actualizar el contador después de la subida
+    // Update the count after uploading
     _updateCount();
   }
 
-  // Mostrar los scans activos en la tabla
+  // Display active scans in the table
   Widget _buildScannedTable() {
     return FutureBuilder<List<Scan>>(
       future: _scanController.getActiveScans(),
@@ -117,16 +127,24 @@ class _HomeViewState extends State<HomeView> {
         }
         return DataTable(
           columns: [
-            DataColumn(label: Text('ID')),
             DataColumn(label: Text('Code')),
             DataColumn(label: Text('Status')),
+            DataColumn(label: Text('Created At'))
           ],
           rows: snapshot.data!.map((scan) {
             return DataRow(
               cells: [
-                DataCell(Text(scan.id.toString())),
                 DataCell(Text(scan.code)),
-                DataCell(Text('Scanned')),
+                DataCell(
+                  Text(
+                    scan.status == 1 ? 'Loaded' : 'Scanned',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.0,
+                        color: scan.status == 1 ? Colors.green : Colors.orange),
+                  ),
+                ),
+                DataCell(Text(scan.createdAt)),
               ],
             );
           }).toList(),
@@ -142,31 +160,26 @@ class _HomeViewState extends State<HomeView> {
         title: Text('RawMaterial Scanning'),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Input con FocusNode
             TextField(
               controller: _controller,
               focusNode: _focusNode,
-              onSubmitted: (_) => _handleSubmit(),
+              onSubmitted: (value) => _handleSubmit(),
               decoration: InputDecoration(
-                labelText: 'Enter barcode',
+                labelText: 'Enter scan code',
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 16),
-            // Botón de carga
-            ElevatedButton.icon(
+            SizedBox(height: 16.0),
+            Text('Total active scans: $_count'),
+            SizedBox(height: 16.0),
+            ElevatedButton(
               onPressed: _uploadScannedData,
-              icon: Icon(Icons.cloud_sync_outlined),
-              label: Text('Upload Scanned Data'),
+              child: Text('Upload Scanned Data'),
             ),
-            SizedBox(height: 16),
-            // Contador de scans activos
-            Text('Scanned Items: $_count'),
-            SizedBox(height: 16),
-            // Tabla de scans activos
+            SizedBox(height: 16.0),
             Expanded(child: _buildScannedTable()),
           ],
         ),

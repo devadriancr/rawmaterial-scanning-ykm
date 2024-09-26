@@ -14,7 +14,7 @@ class Scan {
     required this.updatedAt,
   });
 
-  // Convertir un Scan a Map (para SQLite)
+  // Convert a Scan to Map (for SQLite)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -25,7 +25,7 @@ class Scan {
     };
   }
 
-  // Convertir un Map a Scan
+  // Convert a Map to Scan
   factory Scan.fromMap(Map<String, dynamic> map) {
     return Scan(
       id: map['id'],
