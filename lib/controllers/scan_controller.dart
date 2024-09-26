@@ -56,7 +56,7 @@ class ScanController {
   // Get all active scans (status = 1)
   Future<List<Scan>> getActiveScans() async {
     List<Map<String, dynamic>> scanMaps =
-        await _database.query('scans', where: 'status = 1');
+        await _database.query('scans', where: 'status = 1', orderBy: 'id DESC');
     return List.generate(scanMaps.length, (i) {
       return Scan.fromMap(scanMaps[i]);
     });

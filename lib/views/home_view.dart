@@ -16,6 +16,7 @@ class _HomeViewState extends State<HomeView> {
   final FocusNode _focusNode = FocusNode();
   final ScanController _scanController = ScanController();
   int _count = 0;
+  bool _isUploading = false; // Indicates if the upload process is running
 
   @override
   void initState() {
@@ -81,6 +82,10 @@ class _HomeViewState extends State<HomeView> {
 
   // Method to upload scanned data to the API
   Future<void> _uploadScannedData() async {
+    setState(() {
+      _isUploading = true; // Start showing the progress bar
+    });
+
     List<Scan> scans = await _scanController.getActiveScans();
 
     for (Scan scan in scans) {
@@ -89,7 +94,7 @@ class _HomeViewState extends State<HomeView> {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'code': scan.code,
-          'updated_at': scan.updatedAt,
+          'updated_at': scan.createdAt,
         }),
       );
 
@@ -112,6 +117,10 @@ class _HomeViewState extends State<HomeView> {
 
     // Update the count after uploading
     _updateCount();
+
+    setState(() {
+      _isUploading = false; // Stop showing the progress bar
+    });
   }
 
   // Display active scans in the table
@@ -127,6 +136,7 @@ class _HomeViewState extends State<HomeView> {
         }
         return DataTable(
           columns: [
+            DataColumn(label: Text('ID')),
             DataColumn(label: Text('Code')),
             DataColumn(label: Text('Status')),
             DataColumn(label: Text('Created At'))
@@ -134,6 +144,7 @@ class _HomeViewState extends State<HomeView> {
           rows: snapshot.data!.map((scan) {
             return DataRow(
               cells: [
+                DataCell(Text(scan.id.toString())),
                 DataCell(Text(scan.code)),
                 DataCell(
                   Text(
@@ -179,6 +190,9 @@ class _HomeViewState extends State<HomeView> {
               onPressed: _uploadScannedData,
               child: Text('Upload Scanned Data'),
             ),
+            SizedBox(height: 16.0),
+            // Show progress bar during uploading
+            if (_isUploading) LinearProgressIndicator(), // Progress bar here
             SizedBox(height: 16.0),
             Expanded(child: _buildScannedTable()),
           ],
