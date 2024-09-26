@@ -90,7 +90,8 @@ class _HomeViewState extends State<HomeView> {
 
     for (Scan scan in scans) {
       final response = await http.post(
-        Uri.parse('http://192.168.170.176:8000/api/receive-raw-material'),
+        Uri.parse(
+            'http://192.168.130.9:8086/index.php/api/receive-raw-material'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'code': scan.code,
@@ -128,6 +129,11 @@ class _HomeViewState extends State<HomeView> {
     return FutureBuilder<List<Scan>>(
       future: _scanController.getActiveScans(),
       builder: (context, snapshot) {
+        if (_isUploading) {
+          // Show the progress bar instead of the table
+          return Center(child: LinearProgressIndicator());
+        }
+
         if (!snapshot.hasData) {
           return Center(child: CircularProgressIndicator());
         }
@@ -136,7 +142,7 @@ class _HomeViewState extends State<HomeView> {
         }
         return DataTable(
           columns: [
-            DataColumn(label: Text('ID')),
+            // DataColumn(label: Text('ID')),
             DataColumn(label: Text('Code')),
             DataColumn(label: Text('Status')),
             DataColumn(label: Text('Created At'))
@@ -144,15 +150,16 @@ class _HomeViewState extends State<HomeView> {
           rows: snapshot.data!.map((scan) {
             return DataRow(
               cells: [
-                DataCell(Text(scan.id.toString())),
+                // DataCell(Text(scan.id.toString())),
                 DataCell(Text(scan.code)),
                 DataCell(
                   Text(
-                    scan.status == 1 ? 'Loaded' : 'Scanned',
+                    scan.status == true ? 'Scanned' : 'Loaded',
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16.0,
-                        color: scan.status == 1 ? Colors.green : Colors.orange),
+                        color:
+                            scan.status == true ? Colors.orange : Colors.green),
                   ),
                 ),
                 DataCell(Text(scan.createdAt)),
@@ -191,10 +198,8 @@ class _HomeViewState extends State<HomeView> {
               child: Text('Upload Scanned Data'),
             ),
             SizedBox(height: 16.0),
-            // Show progress bar during uploading
-            if (_isUploading) LinearProgressIndicator(), // Progress bar here
-            SizedBox(height: 16.0),
-            Expanded(child: _buildScannedTable()),
+            Expanded(
+                child: _buildScannedTable()), // Table or Progress Indicator
           ],
         ),
       ),
