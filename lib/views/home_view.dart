@@ -191,7 +191,13 @@ class _HomeViewState extends State<HomeView> {
               ),
             ),
             SizedBox(height: 16.0),
-            Text('Total active scans: $_count'),
+            Text(
+              'Scanned: $_count',
+              style: TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: _uploadScannedData,
